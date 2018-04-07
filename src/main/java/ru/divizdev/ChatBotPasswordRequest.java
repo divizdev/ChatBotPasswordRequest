@@ -19,8 +19,8 @@ public class ChatBotPasswordRequest extends TelegramLongPollingBot {
 
     static final String KEY_G38 = "g38";
     static final String KEY_G70 = "g70";
-    HashMap<Integer, HashMap<String, String>> _passwords = new HashMap<>();
-    RandomPassword rndPassword = new RandomPassword();
+    private HashMap<Integer, HashMap<String, String>> _passwords = new HashMap<>();
+    private RandomPassword rndPassword = new RandomPassword();
 
     @Override
     public void onUpdateReceived(Update update) {
