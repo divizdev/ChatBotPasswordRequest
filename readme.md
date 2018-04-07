@@ -1,2 +1,2 @@
 # Chat Bot for Password Request
-This is Simple Chat Bot for telegram. Name is @ChatBotPasswordRequestbot
+Hello, I am Simple Chat Bot for telegram. My Name is @ChatBotPasswordRequestbot
