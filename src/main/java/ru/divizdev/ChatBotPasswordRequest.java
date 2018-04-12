@@ -1,10 +1,12 @@
 package ru.divizdev;
 
 import org.telegram.telegrambots.api.methods.send.SendMessage;
-import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.api.objects.Contact;
 import org.telegram.telegrambots.api.objects.Update;
-import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.api.objects.replykeyboard.ReplyKeyboardRemove;
+import org.telegram.telegrambots.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 
@@ -13,115 +15,117 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.lang.Math.toIntExact;
-
 public class ChatBotPasswordRequest extends TelegramLongPollingBot {
 
-    static final String KEY_G38 = "g38";
-    static final String KEY_G70 = "g70";
+
+    private static final String COMMAND_START = "/start";
+    private static final String COMMAND_USERS_LIST = "Мне нужна твоя одежда";
     private HashMap<Integer, HashMap<String, String>> _passwords = new HashMap<>();
     private RandomPassword rndPassword = new RandomPassword();
+
+    private  IBotToken _botToken;
+
+    public ChatBotPasswordRequest(IBotToken botToken){
+        _botToken = botToken;
+    }
+
+
 
     @Override
     public void onUpdateReceived(Update update) {
 
-
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String message_text = update.getMessage().getText();
-            SendMessage message;
+        if (update.hasMessage()) {
+            SendMessage message = null;
             long chatId = update.getMessage().getChatId();
-            if (update.getMessage().getText().equals("/start")) {
-
-
-                message = new SendMessage()
-                        .setChatId(chatId)
-                        .setText("Для какой системы вам нужен пароль?");
-                InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-                List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-                List<InlineKeyboardButton> rowInline = new ArrayList<>();
-                rowInline.add(new InlineKeyboardButton().setText("СУРВ GUI (G38)").setCallbackData(KEY_G38));
-                rowInline.add(new InlineKeyboardButton().setText("СУРВ Fiori (G70)").setCallbackData(KEY_G70));
-
-                rowsInline.add(rowInline);
-
-                markupInline.setKeyboard(rowsInline);
-                message.setReplyMarkup(markupInline);
-
+            if (update.getMessage().hasText()) {
+                String textMessage = update.getMessage().getText();
+                switch (textMessage) {
+                    case COMMAND_START:
+                        message = getMessageCommandStart(chatId);
+                        break;
+                    case COMMAND_USERS_LIST:
+                        message = getMessageUsersList(chatId);
+                        break;
+                    default:
+                        message = getMessageNullCommand(chatId);
+                        break;
+                }
             } else {
-                if (update.getMessage().getText().equals("Мне нужна твоя одежда")){
-                    StringBuilder stringBuilder = new StringBuilder();
-                    stringBuilder.append("Пользователи: ");
-                    stringBuilder.append("\n");
-                    for (Map.Entry<Integer, HashMap<String, String>> user : _passwords.entrySet()) {
-                       stringBuilder.append(user.getKey().toString());
-                       stringBuilder.append("\n");
-                    }
-
-                    message = new SendMessage() // Create a message object object
-                            .setChatId(chatId)
-                            .enableHtml(true)
-                            .setText(stringBuilder.toString());
-                }else {
-                    message = new SendMessage() // Create a message object object
-                            .setChatId(chatId)
-                            .setText("Для получения пароля введите команду /start");
+                Contact contact = update.getMessage().getContact();
+                if (contact != null && update.getMessage().getFrom().getId().equals(contact.getUserID())) {
+                    message = getMessageAnswerContact(chatId);
                 }
             }
-
-            try {
-                execute(message); // Sending our message object to user
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-
-        } else if (update.hasCallbackQuery()) {
-            // Set variables
-            String callData = update.getCallbackQuery().getData();
-            long messageId = update.getCallbackQuery().getMessage().getMessageId();
-            long chatId = update.getCallbackQuery().getMessage().getChatId();
-            Integer userId = update.getCallbackQuery().getFrom().getId();
-            String password = "";
-
-            HashMap<String, String> systemKey = _passwords.get(userId);
-            String typeKey = "";
-
-            if (callData.equals(KEY_G38)) {
-                typeKey = KEY_G38;
-
-            } else if (callData.equals(KEY_G70)) {
-                typeKey = KEY_G70;
-            }
-
-            if (!typeKey.isEmpty()) {
-
-                if (systemKey != null) {
-                    password = systemKey.get(typeKey);
-                }
-                if (password == null || password.isEmpty()) {
-                    password = rndPassword.nextString();
-                    if (systemKey == null) {
-                        systemKey = new HashMap<>();
-                    }
-                    systemKey.put(typeKey, password);
-                    _passwords.put(userId, systemKey);
-                }
-            }
-
-
-            if (!password.isEmpty()) {
-                EditMessageText new_message = new EditMessageText()
-                        .setChatId(chatId)
-                        .setMessageId(toIntExact(messageId))
-                        .setText(password);
+            if (message != null) {
                 try {
-                    execute(new_message);
+                    execute(message); // Sending our message object to user
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
             }
+        }  else if (update.hasCallbackQuery()) {
+
 
         }
+    }
 
+
+    private SendMessage getMessageAnswerContact(long chatId) {
+        SendMessage message;
+        message = new SendMessage() // Create a message object object
+                .setChatId(chatId)
+                .setText("Спасибо мы вас запомнили").setReplyMarkup(new ReplyKeyboardRemove());
+        return message;
+    }
+
+    private SendMessage getMessageNullCommand(long chatId) {
+        SendMessage message;
+        message = new SendMessage() // Create a message object object
+                .setChatId(chatId)
+                .setText("Для получения пароля введите команду /start");
+        return message;
+    }
+
+    private SendMessage getMessageUsersList(long chatId) {
+        SendMessage message;
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Пользователи: ");
+        stringBuilder.append("\n");
+        for (Map.Entry<Integer, HashMap<String, String>> user : _passwords.entrySet()) {
+            stringBuilder.append(user.getKey().toString());
+            stringBuilder.append("\n");
+        }
+
+        message = new SendMessage() // Create a message object object
+                .setChatId(chatId)
+                .enableHtml(true)
+                .setText(stringBuilder.toString());
+        return message;
+    }
+
+    private SendMessage getMessageCommandStart(long chatId) {
+        SendMessage message;
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardButtons = new KeyboardRow();
+
+        KeyboardButton keyboardButton = new KeyboardButton("Отправить номер телефона");
+        keyboardButton.setRequestContact(true);
+
+
+        keyboardButtons.add(keyboardButton);
+        keyboardRows.add(keyboardButtons);
+
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setKeyboard(keyboardRows);
+        replyKeyboardMarkup.setOneTimeKeyboard(true);
+
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+
+        message = new SendMessage()
+                .setChatId(chatId)
+                .setText("Для авторизации нужен Ваш телефон").setReplyMarkup(replyKeyboardMarkup);
+        return message;
     }
 
     @Override
@@ -131,6 +135,6 @@ public class ChatBotPasswordRequest extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return "";
+        return _botToken.getToken();
     }
 }
