@@ -16,7 +16,7 @@ public class Main {
 
 
         try {
-            botsApi.registerBot(new ChatBotPasswordRequest(new BotTokenConstant()));
+            botsApi.registerBot(new ChatBotPasswordRequest(new BotTokenConstant(), new PasswordStoreHardcode()));
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
