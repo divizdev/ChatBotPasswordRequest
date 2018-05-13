@@ -18,7 +18,7 @@ public class PasswordStoreHardcode implements IPasswordStore {
         systemPassword.put("СУРВ GUI G38", _randomPassword.nextString());
         systemPassword.put("СУРВ Fiori G71", _randomPassword.nextString());
 
-        _passwords.put("+79167239616", systemPassword);
+        _passwords.put("79167239616", systemPassword);
 
     }
 
